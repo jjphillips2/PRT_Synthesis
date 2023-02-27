@@ -99,3 +99,15 @@ eastLibTrips = eastLibTrips.sort_values(['block_id', 'trip_start_datetime']).res
 
 # output
 eastLibTrips.to_csv('data/trips_flattened_eastLibRoutes.csv')
+
+
+
+# updating total distance from meters to miles 
+trips_flattened = pd.read_csv('/Users/sumati/Documents/CMU/Academics/Spring2023/Capstone/code/data/trips_flattened_eastLibRoutes.csv')
+
+trips_flattened.total_distance_traveled = trips_flattened.total_distance_traveled.apply(lambda x: x/1609.34)
+
+trips_flattened.head()[['block_id', 'trip_id', 'trip_start_time', 'trip_end_time', 'total_distance_traveled']]
+
+# output
+trips_flattened.to_csv('/Users/sumati/Documents/CMU/Academics/Spring2023/Capstone/code/data/trips_flattened_eastLibRoutes_miles.csv')
