@@ -21,7 +21,6 @@ class Bus:
     
     def __init__(self):
         self.current_charge_pct = None
-        self.mileage_remaining = None
         self.block_id = None
         
  # create Trip class       
