@@ -135,19 +135,27 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     plt.xlabel('Number of Completed Trips')
     plt.ylabel('Charging %')
     
-   
-    
-    
+#Charges bus, takes in Bus object, charger type of 'Faster' or 'Slower' for the 450kW or 150kW charger
+def chargeBus(Bus, chargeTime, start_charge_pct, chargerType = 'Faster'):
+    if(chargerType == 'Faster'):
+        AddedCharge = chargeTime*60/35
+    elif(chargerType == 'Slower'):
+        AddedCharge = chargeTime*60/130
+    else:
+        print("charger type not charicterized in model")
+    Bus.current_charge_pct = Bus.current_charge_pct + AddedCharge
+    if(Bus.current_charge_pct > start_charge_pct):
+        Bus.current_charge_pct = start_charge_pct    
 
 ### Run program
 
 if __name__ == '__main__':
     
     # global vars -- TBD
-    start_charge_pct = XXX # max charge at start 
-    min_charge_threshold = XXX # minimum allowed charge remaining
-    blockID = XXX # block of interest 
-    time_of_year = XXX # seasonality var
+    start_charge_pct = 90 # max charge at start 
+    min_charge_threshold = 30 # minimum allowed charge remaining
+    blockID =  183315607# block of interest 
+    time_of_year = 'Winter' # seasonality var
     datafilepath = '/Users/sumati/Documents/CMU/Academics/Spring2023/Capstone/code/data/'
     df = pd.read_csv(datafilepath+'trips_flattened_eastLibRoutes.csv')
 
