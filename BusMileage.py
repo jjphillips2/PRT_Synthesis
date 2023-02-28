@@ -136,8 +136,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
             bus.current_charge_pct = charge_depletion
             trips_complete += 1
     
-    print(charging_profile) 
-    print(trips_complete)    
+    
     # plot charging profiles x trip 
     plt.plot(range(trips_complete), charging_profile)
     plt.title('Charging Profile')
