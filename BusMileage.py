@@ -48,17 +48,24 @@ def get_charge_required(distance_traveled, time_of_year):
     '''
     Parameters
     ----------
-    route_id : str
+    distance_traveled : float
+    time_of_year: str, takes values ("Winter", or "Summer")
     
     Purpose
     --------
-    Takes the route ID and calculates the battery charge required to complete the route
+    Takes the distance and seasonality and 
+    calculates the battery charge required to complete that distance
 
     Returns
     -------
     float: battery percentage required to complete the specified route
     '''
-    pass
+    beta = -.42933544
+    const = -1.91616128
+    batteryChange = abs((beta*distance_traveled) + const)
+    return(batteryChange)
+    
+    
 
 
 # function to conduct checks at the start of each trip for a block, flags when charging layover is needed
@@ -103,8 +110,8 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     charging_profile = [start_charge_pct]
     
     # for each trip in the specified block, store the relevant attributes, and check whether remaining charge/mileage is sufficient to complete next trip
+    trips_complete = 1
     for i, t in enumerate(trips): 
-        trips_complete = 0
         trip_df = trips_flattened_df[(trips_flattened_df.block_id == blockID) & 
                                      (trips_flattened_df.trip_id == t)]
         trip = Trip()
@@ -128,7 +135,9 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
             print('Trip ', t, ' complete!')
             bus.current_charge_pct = charge_depletion
             trips_complete += 1
-            
+    
+    print(charging_profile) 
+    print(trips_complete)    
     # plot charging profiles x trip 
     plt.plot(range(trips_complete), charging_profile)
     plt.title('Charging Profile')
@@ -156,12 +165,12 @@ if __name__ == '__main__':
     min_charge_threshold = 30 # minimum allowed charge remaining
     blockID =  183315607# block of interest 
     time_of_year = 'Winter' # seasonality var
-    datafilepath = '/Users/sumati/Documents/CMU/Academics/Spring2023/Capstone/code/data/'
-    df = pd.read_csv(datafilepath+'trips_flattened_eastLibRoutes.csv')
+    datafilepath = '/Users/sumati/Documents/CMU/Academics/Spring2023/Capstone/code/PRT_Synthesis/'
+    df = pd.read_csv(datafilepath+'trips_flattened_eastLibRoutes_miles.csv')
 
     
     charge_status_via_trip_completion(df, blockID, start_charge_pct, 
-                                      min_charge_threshold)
+                                      min_charge_threshold, time_of_year)
     
 
 
