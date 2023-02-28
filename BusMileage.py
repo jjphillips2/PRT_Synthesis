@@ -109,6 +109,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     # initialize array to keep track of charge for plotting charge depletion x trip 
     charging_profile = [start_charge_pct]
     
+    
     # for each trip in the specified block, store the relevant attributes, and check whether remaining charge/mileage is sufficient to complete next trip
     trips_complete = 1
     for i, t in enumerate(trips): 
@@ -130,18 +131,21 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         # if remaining charge/mileage is insuffiecient, break and charge battery
         if charge_depletion < min_charge_threshold:
             print('Trip ', t, ' incomplete due to insufficient charge level. Charge battery.')
+            return(t)
             break
         else: 
-            print('Trip ', t, ' complete!')
+            #print('Trip ', t, ' complete!')
             bus.current_charge_pct = charge_depletion
             trips_complete += 1
     
     
     # plot charging profiles x trip 
+    plt.scatter(range(trips_complete), charging_profile)
     plt.plot(range(trips_complete), charging_profile)
     plt.title('Charging Profile')
     plt.xlabel('Number of Completed Trips')
     plt.ylabel('Charging %')
+    plt.xticks(range(trips_complete))
     
 #Charges bus, takes in Bus object, charger type of 'Faster' or 'Slower' for the 450kW or 150kW charger
 def chargeBus(Bus, chargeTime, start_charge_pct, chargerType = 'Faster'):
@@ -162,16 +166,21 @@ if __name__ == '__main__':
     # global vars -- TBD
     start_charge_pct = 90 # max charge at start 
     min_charge_threshold = 30 # minimum allowed charge remaining
-    blockID =  183315607# block of interest 
+    #blockID =  183315607 # block of interest 
     time_of_year = 'Winter' # seasonality var
     datafilepath = '/Users/sumati/Documents/CMU/Academics/Spring2023/Capstone/code/PRT_Synthesis/'
     df = pd.read_csv(datafilepath+'trips_flattened_eastLibRoutes_miles.csv')
 
+    allBlocks = np.unique(df.block_id)
+    tripFails = []
+    for block in allBlocks:
+        tripFails.append(charge_status_via_trip_completion(df, block, start_charge_pct, 
+                                      min_charge_threshold, time_of_year))
+        
+    tripFails = [i for i in tripFails if i != None]
+    print(tripFails)
     
-    charge_status_via_trip_completion(df, blockID, start_charge_pct, 
-                                      min_charge_threshold, time_of_year)
     
-
 
 
 
