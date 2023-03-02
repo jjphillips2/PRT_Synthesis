@@ -60,8 +60,14 @@ def get_charge_required(distance_traveled, time_of_year):
     -------
     float: battery percentage required to complete the specified route
     '''
-    beta = -.42933544
-    const = -1.91616128
+    if(time_of_year == 'Summer'):
+        beta = -.42933544
+        const = -1.91616128
+        
+    else:
+        beta = .92
+        const = 0
+        
     batteryChange = abs((beta*distance_traveled) + const)
     return(batteryChange)
     
@@ -130,7 +136,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         
         # if remaining charge/mileage is insuffiecient, break and charge battery
         if charge_depletion < min_charge_threshold:
-            print('Trip ', t, ' incomplete due to insufficient charge level. Charge battery.')
+            print('Trip ', t, ' in block ', blockID, ' incomplete due to insufficient charge level. Charge battery.')
             return(t)
             break
         else: 
@@ -168,7 +174,7 @@ if __name__ == '__main__':
     min_charge_threshold = 30 # minimum allowed charge remaining
     #blockID =  183315607 # block of interest 
     time_of_year = 'Winter' # seasonality var
-    datafilepath = '/Users/sumati/Documents/CMU/Academics/Spring2023/Capstone/code/PRT_Synthesis/'
+    datafilepath = ''
     df = pd.read_csv(datafilepath+'trips_flattened_eastLibRoutes_miles.csv')
 
     allBlocks = np.unique(df.block_id)
@@ -179,6 +185,8 @@ if __name__ == '__main__':
         
     tripFails = [i for i in tripFails if i != None]
     print(tripFails)
+    print()
+    print('Failed in '+ str(len(tripFails)) + ' blocks in ' + time_of_year)
     
     
 
