@@ -15,13 +15,17 @@ import statsmodels.api as sm
 
 # read in data, keep only necessary vars
 path = '/Users/sumati/Documents/CMU/Academics/Spring2023/Capstone/code/data/'
-chargeData = pd.read_csv(path+'ChargingDataJuly.csv')
+summerchargeData = pd.read_csv(path+'ChargingDataJuly.csv')
+winterchargeData = pd.read_csv(path+'WinterChargingData.csv')
+winterchargeData = winterchargeData[~pd.isna(winterchargeData.Duration)]
 
 keep_vars = ['Date', 'Duration', 'Distance', 'Battery Change']
 
+#chargeData = pd.concat([summerchargeData[keep_vars], winterchargeData[keep_vars]]).reset_index(drop = True)
+chargeData = winterchargeData.copy()
 chargeData = chargeData[keep_vars]
-
 chargeData.rename(columns = {'Battery Change': 'BatteryChange'}, inplace = True)
+chargeData['Distance'] = chargeData.Distance.apply(lambda x: float(x)) # adjust data type
 
 # EDA on vars of interest
 sns.scatterplot(x = chargeData.Distance, y = chargeData.BatteryChange)
@@ -29,7 +33,6 @@ sns.scatterplot(x = chargeData.Distance, y = chargeData.BatteryChange)
     # linear negative linear trend, some outliers along longer tirps 
 
 # format duration to also plot
-
 start_time0 = datetime.datetime.strptime('00:00:00', '%H:%M:%S')
 
 for i in range(len(chargeData)):
@@ -59,11 +62,12 @@ print(results.summary())
 
 train_preds = results.predict()
 
-# check predictions
+# check predictions/residuals
 plt.scatter(y_train, train_preds)
 
 residuals = (y_train.reshape(len(y_train)) - train_preds)
 plt.scatter(x = y_train, y = residuals)
+plt.axhline(y = 0, color = 'red')
 
 
 
