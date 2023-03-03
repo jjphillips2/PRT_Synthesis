@@ -44,12 +44,13 @@ class Trip:
         self.charge_required = None
         
 # function to get the amount of charge required to complete a specified route--TBD       
-def get_charge_required(distance_traveled, time_of_year):
+def get_charge_required(distance_traveled, time_of_year, eval_type):
     '''
     Parameters
     ----------
     distance_traveled : float
     time_of_year: str, takes values ("Winter", or "Summer")
+    eval_type: 'reg' for regression or 'wc' for worst case scenario
     
     Purpose
     --------
@@ -60,14 +61,21 @@ def get_charge_required(distance_traveled, time_of_year):
     -------
     float: battery percentage required to complete the specified route
     '''
-    if(time_of_year == 'Summer'):
-        beta = -.42933544
-        const = -1.91616128
+    if time_of_year == 'Summer':
+        if eval_type == 'reg':
+            beta = -.42933544
+            const = -1.91616128
+        else: 
+            pass # to be filled out by Macleod's worst case scenario findings
         
     else:
-        beta = .92
-        const = 0
-        
+        if eval_type == 'reg':
+            beta = -0.5902 
+            const = -1.7664  
+        else: 
+            beta = .92
+            const = 0
+            
     batteryChange = abs((beta*distance_traveled) + const)
     return(batteryChange)
     
@@ -76,7 +84,7 @@ def get_charge_required(distance_traveled, time_of_year):
 
 # function to conduct checks at the start of each trip for a block, flags when charging layover is needed
 def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_pct,
-                                      min_charge_threshold, time_of_year):
+                                      min_charge_threshold, time_of_year, eval_type):
     '''
     Parameters
     ----------
@@ -90,7 +98,9 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         global var, min allowed charge for bus to take a trip.
     time_of_year: int, indicator var
         whether it is a summer or winter time of year, global var
-    
+    eval_type: str, 'reg' or 'wc'
+        whether to calculate charge depletion based on regression results or 
+        worst case scenario analysis
         
     Purpose
     --------
@@ -127,7 +137,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         trip.start_time = trip_df.trip_start_time.iloc[0]
         trip.end_time = trip_df.trip_end_time.iloc[0]
         trip.total_trip_distance = trip_df.total_distance_traveled.iloc[0]
-        trip.charge_required = get_charge_required(trip.total_trip_distance, time_of_year)
+        trip.charge_required = get_charge_required(trip.total_trip_distance, time_of_year, eval_type)
         
         charge_depletion = bus.current_charge_pct - trip.charge_required 
         
@@ -137,12 +147,13 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         # if remaining charge/mileage is insuffiecient, break and charge battery
         if charge_depletion < min_charge_threshold:
             print('Trip ', t, ' in block ', blockID, ' incomplete due to insufficient charge level. Charge battery.')
-            return(t)
+            return(t, blockID)
             break
         else: 
             #print('Trip ', t, ' complete!')
             bus.current_charge_pct = charge_depletion
             trips_complete += 1
+            
     
     
     # plot charging profiles x trip 
@@ -174,16 +185,23 @@ if __name__ == '__main__':
     min_charge_threshold = 30 # minimum allowed charge remaining
     #blockID =  183315607 # block of interest 
     time_of_year = 'Winter' # seasonality var
+    eval_type = 'wc'
     datafilepath = ''
     df = pd.read_csv(datafilepath+'trips_flattened_eastLibRoutes_miles.csv')
 
     allBlocks = np.unique(df.block_id)
     tripFails = []
+    blockID_needing_charge = []
     for block in allBlocks:
-        tripFails.append(charge_status_via_trip_completion(df, block, start_charge_pct, 
-                                      min_charge_threshold, time_of_year))
+        blockCheck = charge_status_via_trip_completion(df, block, start_charge_pct, 
+                                      min_charge_threshold, time_of_year, eval_type)
         
+        if blockCheck != None:
+            tripFails.append(blockCheck[0])
+            blockID_needing_charge.append(blockCheck[1])
+            
     tripFails = [i for i in tripFails if i != None]
+    blockID_needing_charge = [i for i in blockID_needing_charge if i != None]
     print(tripFails)
     print()
     print('Failed in '+ str(len(tripFails)) + ' blocks in ' + time_of_year)
