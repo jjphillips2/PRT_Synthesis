@@ -151,7 +151,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     plt.title('Charging Profile')
     plt.xlabel('Number of Completed Trips')
     plt.ylabel('Charging %')
-    plt.xticks(range(trips_complete))
+    plt.xticks(range(15))
     
 #Charges bus, takes in Bus object, charger type of 'Faster' or 'Slower' for the 450kW or 150kW charger
 def chargeBus(Bus, chargeTime, start_charge_pct, chargerType = 'Faster'):
