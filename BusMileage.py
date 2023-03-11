@@ -66,7 +66,8 @@ def get_charge_required(distance_traveled, time_of_year, eval_type):
             beta = -.42933544
             const = -1.91616128
         else: 
-            pass # to be filled out by Macleod's worst case scenario findings
+            beta = 0.8156
+            const = 0
         
     else:
         if eval_type == 'reg':
@@ -205,6 +206,8 @@ if __name__ == '__main__':
     print(tripFails)
     print()
     print('Failed in '+ str(len(tripFails)) + ' blocks in ' + time_of_year)
+    
+    #df[df.block_id.apply(lambda x: x in blockID_needing_charge)].to_csv('blocks_needing_charge.csv')
     
     
 
