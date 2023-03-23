@@ -23,7 +23,7 @@ class Bus:
         self.current_charge_pct = None
         self.block_id = None
         
-    #Charges bus, takes in Bus object, charger type of 'Faster' or 'Slower' for the 450kW or 150kW charger
+    #Charges bus, takes in charger type of 'Faster' or 'Slower' for the 450kW or 150kW charger
     def chargeBus(self, chargeTime, start_charge_pct, chargerType = 'Faster'):
         if(chargerType == 'Faster'):
             AddedCharge = chargeTime*60/35
@@ -155,15 +155,16 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         trip.total_trip_distance = trip_df.total_distance_traveled.iloc[0]
         trip.charge_required = get_charge_required(trip.total_trip_distance, time_of_year, eval_type)
         
-        
+        #get time in minutes when the trip starts
         (h, m, s) = trip.start_time.split(':')
-        start = int(h) * 60 + int(m) + int(s)/60
+        start_time = int(h) * 60 + int(m) + int(s)/60
         #Find if there is enough time to charge bus
-        if(start - last_end_time > min_charge_time):
-            charge_options.update({trip.trip_id: start - last_end_time})
-            #seeing what would happen if it were allowed to charge in layover
-            bus.chargeBus(start - last_end_time, start_charge_pct)
+        if(start_time - last_end_time > min_charge_time):
+            charge_options.update({trip.trip_id: start_time - last_end_time})
+            #seeing what would happen if it were allowed to charge in layover comment out for normal functionality
+            #bus.chargeBus(start_time - last_end_time, start_charge_pct)
 
+        #find new end time current trip
         (h,m,s) = trip.end_time.split(':')
         last_end_time = int(h)*60 + int(m) + int(s)/60
         
