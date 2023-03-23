@@ -128,7 +128,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     
     # initialize dict which will contain time possible to charge during layover
     charge_options = {}
-    last_start_time = 60*24
+    last_end_time = 60*24
     
     # for each trip in the specified block, store the relevant attributes, and check whether remaining charge/mileage is sufficient to complete next trip
     trips_complete = 1
@@ -149,11 +149,13 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         
         
         (h, m, s) = trip.start_time.split(':')
-        start = int(h) * 3600 + int(m) * 60 + int(s)
+        start = int(h) * 60 + int(m) + int(s)/60
         #Find if there is enough time to charge bus
-        if(start - last_start_time > min_charge_time):
-            charge_options.update({trip.trip_id: start - last_start_time})
-        last_start_time = start
+        if(start - last_end_time > min_charge_time):
+            charge_options.update({trip.trip_id: start - last_end_time})
+
+        (h,m,s) = trip.end_time.split(':')
+        last_end_time = int(h)*60 + int(m) + int(s)/60
         
         # if remaining charge/mileage is insuffiecient, break and charge battery
         if charge_depletion < min_charge_threshold:
