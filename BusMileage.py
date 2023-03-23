@@ -85,7 +85,7 @@ def get_charge_required(distance_traveled, time_of_year, eval_type):
 
 # function to conduct checks at the start of each trip for a block, flags when charging layover is needed
 def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_pct,
-                                      min_charge_threshold, time_of_year, eval_type):
+                                      min_charge_threshold, time_of_year, eval_type, min_charge_time):
     '''
     Parameters
     ----------
@@ -126,6 +126,9 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     # initialize array to keep track of charge for plotting charge depletion x trip 
     charging_profile = [start_charge_pct]
     
+    # initialize dict which will contain time possible to charge during layover
+    charge_options = {}
+    last_start_time = 60*24
     
     # for each trip in the specified block, store the relevant attributes, and check whether remaining charge/mileage is sufficient to complete next trip
     trips_complete = 1
@@ -145,10 +148,17 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         charging_profile.append(charge_depletion)
         
         
+        (h, m, s) = trip.start_time.split(':')
+        start = int(h) * 3600 + int(m) * 60 + int(s)
+        #Find if there is enough time to charge bus
+        if(start - last_start_time > min_charge_time):
+            charge_options.update({trip.trip_id: start - last_start_time})
+        last_start_time = start
+        
         # if remaining charge/mileage is insuffiecient, break and charge battery
         if charge_depletion < min_charge_threshold:
             print('Trip ', t, ' in block ', blockID, ' incomplete due to insufficient charge level. Charge battery.')
-            return(t, blockID)
+            return(t, blockID, charge_options)
             break
         else: 
             #print('Trip ', t, ' complete!')
@@ -184,6 +194,8 @@ if __name__ == '__main__':
     # global vars -- TBD
     start_charge_pct = 90 # max charge at start 
     min_charge_threshold = 30 # minimum allowed charge remaining
+    #minimum charging time in minutes
+    min_charge_time = 5
     #blockID =  183315607 # block of interest 
     time_of_year = 'Winter' # seasonality var
     eval_type = 'wc'
@@ -193,13 +205,16 @@ if __name__ == '__main__':
     allBlocks = np.unique(df.block_id)
     tripFails = []
     blockID_needing_charge = []
+    block_charge_options = []
     for block in allBlocks:
         blockCheck = charge_status_via_trip_completion(df, block, start_charge_pct, 
-                                      min_charge_threshold, time_of_year, eval_type)
+                                      min_charge_threshold, time_of_year, eval_type, 
+                                      min_charge_time)
         
         if blockCheck != None:
             tripFails.append(blockCheck[0])
             blockID_needing_charge.append(blockCheck[1])
+            block_charge_options.append([blockCheck[1], blockCheck[2]])
             
     tripFails = [i for i in tripFails if i != None]
     blockID_needing_charge = [i for i in blockID_needing_charge if i != None]
