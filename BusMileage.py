@@ -23,6 +23,18 @@ class Bus:
         self.current_charge_pct = None
         self.block_id = None
         
+    #Charges bus, takes in Bus object, charger type of 'Faster' or 'Slower' for the 450kW or 150kW charger
+    def chargeBus(self, chargeTime, start_charge_pct, chargerType = 'Faster'):
+        if(chargerType == 'Faster'):
+            AddedCharge = chargeTime*60/35
+        elif(chargerType == 'Slower'):
+            AddedCharge = chargeTime*60/130
+        else:
+            print("charger type not charicterized in model")
+        self.current_charge_pct = self.current_charge_pct + AddedCharge
+        if(self.current_charge_pct > start_charge_pct):
+            self.current_charge_pct = start_charge_pct   
+        
  # create Trip class       
 class Trip: 
     """
@@ -143,19 +155,20 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         trip.total_trip_distance = trip_df.total_distance_traveled.iloc[0]
         trip.charge_required = get_charge_required(trip.total_trip_distance, time_of_year, eval_type)
         
-        charge_depletion = bus.current_charge_pct - trip.charge_required 
-        
-        charging_profile.append(charge_depletion)
-        
         
         (h, m, s) = trip.start_time.split(':')
         start = int(h) * 60 + int(m) + int(s)/60
         #Find if there is enough time to charge bus
         if(start - last_end_time > min_charge_time):
             charge_options.update({trip.trip_id: start - last_end_time})
+            #seeing what would happen if it were allowed to charge in layover
+            bus.chargeBus(start - last_end_time, start_charge_pct)
 
         (h,m,s) = trip.end_time.split(':')
         last_end_time = int(h)*60 + int(m) + int(s)/60
+        
+        charge_depletion = bus.current_charge_pct - trip.charge_required 
+        charging_profile.append(charge_depletion)
         
         # if remaining charge/mileage is insuffiecient, break and charge battery
         if charge_depletion < min_charge_threshold:
@@ -177,17 +190,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     plt.ylabel('Charging %')
     plt.xticks(range(15))
     
-#Charges bus, takes in Bus object, charger type of 'Faster' or 'Slower' for the 450kW or 150kW charger
-def chargeBus(Bus, chargeTime, start_charge_pct, chargerType = 'Faster'):
-    if(chargerType == 'Faster'):
-        AddedCharge = chargeTime*60/35
-    elif(chargerType == 'Slower'):
-        AddedCharge = chargeTime*60/130
-    else:
-        print("charger type not charicterized in model")
-    Bus.current_charge_pct = Bus.current_charge_pct + AddedCharge
-    if(Bus.current_charge_pct > start_charge_pct):
-        Bus.current_charge_pct = start_charge_pct    
+ 
 
 ### Run program
 
