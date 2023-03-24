@@ -140,10 +140,6 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     # initialize array to keep track of charge for plotting charge depletion x trip 
     charging_profile = [start_charge_pct]
     
-    # initialize dict which will contain time possible to charge during layover
-    charge_options = {}
-    last_end_time = 60*24
-    
     # for each trip in the specified block, store the relevant attributes, and check whether remaining charge/mileage is sufficient to complete next trip
     trips_complete = 1
     for i, t in enumerate(trips): 
@@ -157,29 +153,13 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         trip.total_trip_distance = trip_df.total_distance_traveled.iloc[0]
         trip.charge_required = get_charge_required(trip.total_trip_distance, time_of_year, eval_type)
         
-        #get time in minutes when the trip starts
-        (h, m, s) = trip.start_time.split(':')
-        start_time = int(h) * 60 + int(m) + int(s)/60
-        #Find if there is enough time to charge bus
-        if(start_time - last_end_time > min_charge_time):
-            #seeing what would happen if it were allowed to charge in layover
-            #set charge to false for normal failures
-            added_charge = bus.chargeBus(start_time - last_end_time, start_charge_pct, charge=False)
-            charge_options.update({trip.trip_id: added_charge})
-            
-            
-
-        #find new end time current trip
-        (h,m,s) = trip.end_time.split(':')
-        last_end_time = int(h)*60 + int(m) + int(s)/60
-        
         charge_depletion = bus.current_charge_pct - trip.charge_required 
         charging_profile.append(charge_depletion)
         
         # if remaining charge/mileage is insuffiecient, break and charge battery
         if charge_depletion < min_charge_threshold:
             print('Trip ', t, ' in block ', blockID, ' incomplete due to insufficient charge level. Charge battery.')
-            return(t, blockID, charge_options)
+            return(t, blockID)
             break
         else: 
             #print('Trip ', t, ' complete!')
@@ -196,7 +176,52 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     plt.ylabel('Charging %')
     plt.xticks(range(15))
     
- 
+    
+def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold, 
+                      time_of_year, eval_type):
+    bus = Bus()
+    bus.current_charge_pct = start_charge_pct
+    bus.block_id = blockID
+    
+    # get trip list based on block_id
+    trips = df[df.block_id == blockID].trip_id.tolist()
+    
+        
+    # initialize dict which will contain time possible to charge during layover
+    charge_options = {}
+    last_end_time = 60*24
+    # initialize array to keep track of charge for plotting charge depletion x trip 
+    charge = start_charge_pct
+    trips_complete = 1
+    for i, t in enumerate(trips): 
+        trip_df = df[(df.block_id == blockID) & (df.trip_id == t)]
+        trip = Trip()
+        trip.trip_id = t
+        trip.route_id = trip_df.route_id.iloc[0]
+        trip.start_time = trip_df.trip_start_time.iloc[0]
+        trip.end_time = trip_df.trip_end_time.iloc[0]
+        
+        #get time in minutes when the trip starts
+        (h, m, s) = trip.start_time.split(':')
+        start_time = int(h) * 60 + int(m) + int(s)/60
+        #Find if there is enough time to charge bus
+        if(start_time - last_end_time > min_charge_time):
+            #seeing what would happen if it were allowed to charge in layover
+            #set charge to false for normal failures
+            added_charge = bus.chargeBus(start_time - last_end_time, start_charge_pct, charge=False)
+            charge_options.update({trip.trip_id: added_charge})
+            
+        #find new end time current trip
+        (h,m,s) = trip.end_time.split(':')
+        last_end_time = int(h)*60 + int(m) + int(s)/60
+        
+        trip.total_trip_distance = trip_df.total_distance_traveled.iloc[0]
+        trip.charge_required = get_charge_required(trip.total_trip_distance, time_of_year, eval_type)           
+        
+        bus.current_charge_pct = bus.current_charge_pct - trip.charge_required 
+        
+    chargeNeeded = min_charge_threshold - bus.current_charge_pct
+    return [chargeNeeded, charge_options]
 
 ### Run program
 
@@ -225,7 +250,6 @@ if __name__ == '__main__':
         if blockCheck != None:
             tripFails.append(blockCheck[0])
             blockID_needing_charge.append(blockCheck[1])
-            block_charge_options.append([blockCheck[1], blockCheck[2]])
             
     tripFails = [i for i in tripFails if i != None]
     blockID_needing_charge = [i for i in blockID_needing_charge if i != None]
@@ -233,6 +257,14 @@ if __name__ == '__main__':
     print()
     print('Failed in '+ str(len(tripFails)) + ' blocks in ' + time_of_year)
     
+    #Finds how much charge the failed blocks need to be sucessful, need to set charge in bus charging to False to work properly
+    charge_needed_list = []
+    for block in blockID_needing_charge:
+        FailedBlockCheck = get_charge_needed(df, block, start_charge_pct,
+                                               min_charge_threshold, time_of_year, eval_type)
+        charge_needed_list.append([block, FailedBlockCheck[0]])
+        block_charge_options.append([block, FailedBlockCheck[1]])
+        
     #df[df.block_id.apply(lambda x: x in blockID_needing_charge)].to_csv('blocks_needing_charge.csv')
     
     
