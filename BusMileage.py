@@ -139,7 +139,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     
     # initialize array to keep track of charge for plotting charge depletion x trip 
     charging_profile = [start_charge_pct]
-    
+    last_end_time = 60*24
     # for each trip in the specified block, store the relevant attributes, and check whether remaining charge/mileage is sufficient to complete next trip
     trips_complete = 1
     for i, t in enumerate(trips): 
@@ -152,6 +152,20 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         trip.end_time = trip_df.trip_end_time.iloc[0]
         trip.total_trip_distance = trip_df.total_distance_traveled.iloc[0]
         trip.charge_required = get_charge_required(trip.total_trip_distance, time_of_year, eval_type)
+        
+        #get time in minutes when the trip starts
+        (h, m, s) = trip.start_time.split(':')
+        start_time = int(h) * 60 + int(m) + int(s)/60
+        #Find if there is enough time to charge bus
+        if(start_time - last_end_time > min_charge_time):
+            #seeing what would happen if it were allowed to charge in layover
+            #set charge to false for normal failures
+            added_charge = bus.chargeBus(start_time - last_end_time, 
+                                         start_charge_pct, charge=False)
+            
+        #find new end time current trip
+        (h,m,s) = trip.end_time.split(':')
+        last_end_time = int(h)*60 + int(m) + int(s)/60
         
         charge_depletion = bus.current_charge_pct - trip.charge_required 
         charging_profile.append(charge_depletion)
@@ -208,7 +222,8 @@ def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold,
         if(start_time - last_end_time > min_charge_time):
             #seeing what would happen if it were allowed to charge in layover
             #set charge to false for normal failures
-            added_charge = bus.chargeBus(start_time - last_end_time, start_charge_pct, charge=False)
+            added_charge = bus.chargeBus(start_time - last_end_time, 
+                                         start_charge_pct, charge=False)
             charge_options.update({trip.trip_id: added_charge})
             
         #find new end time current trip
