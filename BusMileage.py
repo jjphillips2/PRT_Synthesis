@@ -24,16 +24,18 @@ class Bus:
         self.block_id = None
         
     #Charges bus, takes in charger type of 'Faster' or 'Slower' for the 450kW or 150kW charger
-    def chargeBus(self, chargeTime, start_charge_pct, chargerType = 'Faster'):
+    def chargeBus(self, chargeTime, start_charge_pct, charge=True, chargerType = 'Faster'):
         if(chargerType == 'Faster'):
             AddedCharge = chargeTime*60/35
         elif(chargerType == 'Slower'):
             AddedCharge = chargeTime*60/130
         else:
             print("charger type not charicterized in model")
-        self.current_charge_pct = self.current_charge_pct + AddedCharge
-        if(self.current_charge_pct > start_charge_pct):
-            self.current_charge_pct = start_charge_pct   
+        if(self.current_charge_pct + AddedCharge > start_charge_pct):
+            AddedCharge = start_charge_pct - self.current_charge_pct
+        if(charge):
+            self.current_charge_pct = self.current_charge_pct + AddedCharge
+        return AddedCharge
         
  # create Trip class       
 class Trip: 
@@ -160,9 +162,12 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         start_time = int(h) * 60 + int(m) + int(s)/60
         #Find if there is enough time to charge bus
         if(start_time - last_end_time > min_charge_time):
-            charge_options.update({trip.trip_id: start_time - last_end_time})
-            #seeing what would happen if it were allowed to charge in layover comment out for normal functionality
-            #bus.chargeBus(start_time - last_end_time, start_charge_pct)
+            #seeing what would happen if it were allowed to charge in layover
+            #set charge to false for normal failures
+            added_charge = bus.chargeBus(start_time - last_end_time, start_charge_pct, charge=False)
+            charge_options.update({trip.trip_id: added_charge})
+            
+            
 
         #find new end time current trip
         (h,m,s) = trip.end_time.split(':')
