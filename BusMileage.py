@@ -116,7 +116,9 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     eval_type: str, 'reg' or 'wc'
         whether to calculate charge depletion based on regression results or 
         worst case scenario analysis
-        
+    min_charge_time: int
+        minimum number of minutes required for charge to happen. Usually flags a layover period
+    
     Purpose
     --------
     For each trip in a block, assess whether bus can complete trip before hitting minimum
@@ -242,14 +244,12 @@ def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold,
 
 if __name__ == '__main__':
     
-    # global vars -- TBD
+    # global vars
     start_charge_pct = 90 # max charge at start 
     min_charge_threshold = 30 # minimum allowed charge remaining
-    #minimum charging time in minutes
-    min_charge_time = 5
-    #blockID =  183315607 # block of interest 
+    min_charge_time = 5 #minimum charging time in minutes
     time_of_year = 'Winter' # seasonality var
-    eval_type = 'wc'
+    eval_type = 'wc' # whether to eval charging profile by regression or worst case scenario
     datafilepath = ''
     df = pd.read_csv(datafilepath+'trips_flattened_eastLibRoutes_miles.csv')
 
@@ -272,6 +272,7 @@ if __name__ == '__main__':
     print()
     print('Failed in '+ str(len(tripFails)) + ' blocks in ' + time_of_year)
     
+
     #Finds how much charge the failed blocks need to be sucessful, need to set charge in bus charging to False to work properly
     charge_needed_list = []
     for block in blockID_needing_charge:
@@ -280,9 +281,11 @@ if __name__ == '__main__':
         charge_needed_list.append([block, FailedBlockCheck[0]])
         block_charge_options.append([block, FailedBlockCheck[1]])
         
-    #df[df.block_id.apply(lambda x: x in blockID_needing_charge)].to_csv('blocks_needing_charge.csv')
-    
-    
+   
 
+    df[df.block_id.apply(lambda x: x in blockID_needing_charge)].to_csv('blocks_needing_charge.csv')
+
+    
+    
 
 
