@@ -160,6 +160,12 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         start_time = int(h) * 60 + int(m) + int(s)/60
         #Find if there is enough time to charge bus
         if(start_time - last_end_time > min_charge_time):
+            '''
+            UPDATE: add location-based check to make sure charging happens at layover point 
+                that can support charging
+            UPDATE: make sure can complete the charge/travel to and from charging point 
+                within the layover time
+            '''
             #seeing what would happen if it were allowed to charge in layover
             #set charge to false for normal failures
             added_charge = bus.chargeBus(start_time - last_end_time, 
