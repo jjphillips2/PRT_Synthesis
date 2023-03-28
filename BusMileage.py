@@ -56,9 +56,10 @@ class Trip:
         self.end_time = None
         self.total_trip_distance = None
         self.charge_required = None
+        self.trip_duration = None
         
 # function to get the amount of charge required to complete a specified route--TBD       
-def get_charge_required(distance_traveled, time_of_year, eval_type):
+def get_charge_required(distance_traveled, durationMinutes, time_of_year, eval_type):
     '''
     Parameters
     ----------
@@ -77,21 +78,24 @@ def get_charge_required(distance_traveled, time_of_year, eval_type):
     '''
     if time_of_year == 'Summer':
         if eval_type == 'reg':
-            beta = -.42933544
-            const = -1.91616128
+            Distancebeta = 0.1799
+            timeBeta = 0.0565
+            const = 1.2035
         else: 
-            beta = 0.8156
-            const = 0
+           beta = 0.8156
+           const = 0
         
     else:
         if eval_type == 'reg':
-            beta = -0.5902 
-            const = -1.7664  
+            Distancebeta = 0.3257
+            timeBeta = 0.0701
+            const = -0.0178 
         else: 
             beta = .92
             const = 0
             
-    batteryChange = abs((beta*distance_traveled) + const)
+    #batteryChange = abs((beta*durationMinutes) + const)
+    batteryChange = abs((Distancebeta*distance_traveled)+(timeBeta*durationMinutes)+const)
     return(batteryChange)
     
     
@@ -141,7 +145,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     
     # initialize array to keep track of charge for plotting charge depletion x trip 
     charging_profile = [start_charge_pct]
-    last_end_time = 60*24
+    last_end_time = 60*27 # there are some trips that continue into the next day, so the hour time stamps are > 24
     # for each trip in the specified block, store the relevant attributes, and check whether remaining charge/mileage is sufficient to complete next trip
     trips_complete = 1
     for i, t in enumerate(trips): 
@@ -153,7 +157,10 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         trip.start_time = trip_df.trip_start_time.iloc[0]
         trip.end_time = trip_df.trip_end_time.iloc[0]
         trip.total_trip_distance = trip_df.total_distance_traveled.iloc[0]
-        trip.charge_required = get_charge_required(trip.total_trip_distance, time_of_year, eval_type)
+        trip.trip_duration = trip_df.timeDelta_minutes.iloc[0]
+        trip.charge_required = get_charge_required(trip.total_trip_distance,trip.trip_duration,
+                                                   time_of_year, eval_type)
+        
         
         #get time in minutes when the trip starts
         (h, m, s) = trip.start_time.split(':')
@@ -165,6 +172,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
                 that can support charging
             UPDATE: make sure can complete the charge/travel to and from charging point 
                 within the layover time
+            FOR THIS WE NEED LIST OF LAYOVER LOCATIONS THAT ARE GOOD.
             '''
             #seeing what would happen if it were allowed to charge in layover
             #set charge to false for normal failures
@@ -222,6 +230,7 @@ def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold,
         trip.route_id = trip_df.route_id.iloc[0]
         trip.start_time = trip_df.trip_start_time.iloc[0]
         trip.end_time = trip_df.trip_end_time.iloc[0]
+        trip.trip_duration = trip_df.timeDelta_minutes.iloc[0]
         
         #get time in minutes when the trip starts
         (h, m, s) = trip.start_time.split(':')
@@ -239,7 +248,8 @@ def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold,
         last_end_time = int(h)*60 + int(m) + int(s)/60
         
         trip.total_trip_distance = trip_df.total_distance_traveled.iloc[0]
-        trip.charge_required = get_charge_required(trip.total_trip_distance, time_of_year, eval_type)           
+        trip.charge_required = get_charge_required(trip.total_trip_distance, trip.trip_duration,
+                                                   time_of_year, eval_type)           
         
         bus.current_charge_pct = bus.current_charge_pct - trip.charge_required 
         
@@ -255,7 +265,7 @@ if __name__ == '__main__':
     min_charge_threshold = 30 # minimum allowed charge remaining
     min_charge_time = 5 #minimum charging time in minutes
     time_of_year = 'Winter' # seasonality var
-    eval_type = 'wc' # whether to eval charging profile by regression or worst case scenario
+    eval_type = 'reg' # whether to eval charging profile by regression or worst case scenario
     datafilepath = ''
     df = pd.read_csv(datafilepath+'trips_flattened_eastLibRoutes_miles.csv')
 
@@ -278,6 +288,7 @@ if __name__ == '__main__':
     print()
     print('Failed in '+ str(len(tripFails)) + ' blocks in ' + time_of_year)
     
+    df[df.block_id.apply(lambda x: x in blockID_needing_charge)].to_csv('blocks_needing_charge.csv')
 
     #Finds how much charge the failed blocks need to be sucessful, need to set charge in bus charging to False to work properly
     charge_needed_list = []
@@ -289,7 +300,7 @@ if __name__ == '__main__':
         
    
 
-    df[df.block_id.apply(lambda x: x in blockID_needing_charge)].to_csv('blocks_needing_charge.csv')
+    
 
     
     
