@@ -79,23 +79,23 @@ def get_charge_required(distance_traveled, durationMinutes, time_of_year, eval_t
     '''
     if time_of_year == 'Summer':
         if eval_type == 'reg':
-            Distancebeta = 0.1799
-            timeBeta = 0.0565
-            const = 1.2035
+            Distancebeta = -0.42933544
+            timeBeta = 0
+            const = -1.91616128
         else: 
            beta = 0.8156
            const = 0
         
     else:
         if eval_type == 'reg':
-            Distancebeta = 0.3257
-            timeBeta = 0.0701
-            const = -0.0178 
+            Distancebeta = -0.5902 
+            timeBeta = 0
+            const = -1.7664  
         else: 
             beta = .92
             const = 0
             
-    #batteryChange = abs((beta*durationMinutes) + const)
+    #batteryChange = abs((beta*distance_traveled) + const)
     batteryChange = abs((Distancebeta*distance_traveled)+(timeBeta*durationMinutes)+const)
     return(batteryChange)
     
@@ -162,19 +162,19 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         trip.charge_required = get_charge_required(trip.total_trip_distance,trip.trip_duration,
                                                    time_of_year, eval_type)
         
-        
+        '''
         #get time in minutes when the trip starts
         (h, m, s) = trip.start_time.split(':')
         start_time = int(h) * 60 + int(m) + int(s)/60
         #Find if there is enough time to charge bus
         if(start_time - last_end_time > min_charge_time):
-            '''
+            '''''''
             UPDATE: add location-based check to make sure charging happens at layover point 
                 that can support charging
             UPDATE: make sure can complete the charge/travel to and from charging point 
                 within the layover time
             FOR THIS WE NEED LIST OF LAYOVER LOCATIONS THAT ARE GOOD.
-            '''
+            ''''''
             #seeing what would happen if it were allowed to charge in layover
             #set charge to false for normal failures
             try:
@@ -189,7 +189,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
         #find new end time current trip
         (h,m,s) = trip.end_time.split(':')
         last_end_time = int(h)*60 + int(m) + int(s)/60
-        
+        '''
         charge_depletion = bus.current_charge_pct - trip.charge_required 
         charging_profile.append(charge_depletion)
         
@@ -204,7 +204,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
             trips_complete += 1
             
     
-    
+    '''
     # plot charging profiles x trip 
     plt.scatter(range(trips_complete), charging_profile)
     plt.plot(range(trips_complete), charging_profile)
@@ -212,6 +212,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     plt.xlabel('Number of Completed Trips')
     plt.ylabel('Charging %')
     plt.xticks(range(15))
+    '''
     
     
 def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold, 
@@ -282,11 +283,12 @@ if __name__ == '__main__':
     time_of_year = 'Winter' # seasonality var
     eval_type = 'reg' # whether to eval charging profile by regression or worst case scenario
     datafilepath = ''
-    df = pd.read_csv(datafilepath+'trips_flattened_eastLibRoutes_miles.csv')
+    df = pd.read_csv(datafilepath+'trips_flattened_allRoutes.csv')
 
     allBlocks = np.unique(df.block_id)
     tripFails = []
-    
+    time_to_charge = []
+    '''
     #example set of trips where charging is required
     tripLocations = [[1, [11806070, 9999070, 1775070, 11532070, 9943070]],
                       [2, [11297070, 4420070, 12721010, 6313010, 1376010, 11660010]],
@@ -314,7 +316,7 @@ if __name__ == '__main__':
                 time_to_charge.append([item[1][i], best_location, best_time])
     time_to_charge = pd.DataFrame(time_to_charge, columns=['trip','location', 'time'])
     time_to_charge.set_index('trip', inplace=True)
-    
+    '''
     blockID_needing_charge = []
     block_charge_options = []
     for block in allBlocks:
@@ -335,7 +337,7 @@ if __name__ == '__main__':
     df[df.block_id.apply(lambda x: x in blockID_needing_charge)].to_csv('blocks_needing_charge.csv')
     
    
-    
+    '''
     #Finds how much charge the failed blocks need to be sucessful, need to set charge in bus charging to False to work properly
     charge_needed_list = []
     for block in blockID_needing_charge:
@@ -345,8 +347,8 @@ if __name__ == '__main__':
         charge_needed_list.append([block, FailedBlockCheck[0]])
         block_charge_options.append([block, FailedBlockCheck[1]])
         
+   '''
    
-
     
 
     
