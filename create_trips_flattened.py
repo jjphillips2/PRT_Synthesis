@@ -9,21 +9,22 @@ import numpy as np
 import datetime as datetime
 from matplotlib import pyplot as plt
 
+path = '/Users/sumati/Documents/CMU/Academics/Spring2023/Capstone/code/data'
 # read in trips
-trips = pd.read_csv('data/GTFS_2022/trips.csv')
+trips = pd.read_csv(path+'/GTFS_2022/trips.csv')
 trips = trips[~trips.trip_id.str.contains('Rail')] # remove rail/incline
 print(trips.shape)
 trips.head()
 
 # read in stop times
-stop_times = pd.read_csv('data/GTFS_2022/stop_times.csv')
+stop_times = pd.read_csv(path+'/GTFS_2022/stop_times.csv')
 print(stop_times.shape)
 stop_times.trip_id = stop_times.trip_id.apply(lambda x: str(x))
 stop_times.stop_id = stop_times.stop_id.apply(lambda x: str(x))
 stop_times.head()
 
 # merge stops with stoptimes to add lat/long
-stops = pd.read_csv('data/GTFS_2022/stops.csv')
+stops = pd.read_csv(path+'/GTFS_2022/stops.csv')
 stops = stops[['stop_id', 'stop_name']]
 print(stops.shape)
 stops.head()
@@ -85,8 +86,16 @@ for i in range(len(tripWide)):
     tripWide.loc[i, 'timeDelta'] = tripWide.loc[i, 'trip_end_datetime'] - tripWide.loc[i, 'trip_start_datetime']
     tripWide.loc[i, 'timeDelta_minutes'] = tripWide.loc[i, 'timeDelta'].seconds / 60
     tripWide.loc[i, 'timeDelta_hours'] = tripWide.loc[i, 'timeDelta_minutes']/60
+  
     
-    
+  
+# output for all routes
+tripWide.total_distance_traveled = tripWide.total_distance_traveled.apply(lambda x: x/1609.34)
+tripWide.head()[['block_id', 'trip_id', 'trip_start_time', 'trip_end_time', 'total_distance_traveled']]
+tripWide = tripWide.sort_values(['block_id', 'trip_start_datetime']).reset_index(drop = True)
+tripWide.to_csv('trips_flattened_allRoutes.csv')
+   
+ 
 # filter for routes from east liberty garage 
 east_lib_routes = ['71A','71D','74','89','P2','P78','P1','71B','88','68','69','71','77','86',
                    '87','P68','P69','P71','75','67','P12','P16','P67','28X','79','82','P17','71C','58']
