@@ -79,23 +79,23 @@ def get_charge_required(distance_traveled, durationMinutes, time_of_year, eval_t
     '''
     if time_of_year == 'Summer':
         if eval_type == 'reg':
-            Distancebeta = -0.42933544
-            timeBeta = 0
-            const = -1.91616128
+            Distancebeta = 0.1799
+            timeBeta = 0.0565
+            const = 1.2035
         else: 
            beta = 0.8156
            const = 0
         
     else:
         if eval_type == 'reg':
-            Distancebeta = -0.5902 
-            timeBeta = 0
-            const = -1.7664  
+            Distancebeta = 0.3257
+            timeBeta = 0.0701
+            const = -0.0178 
         else: 
             beta = .92
             const = 0
             
-    #batteryChange = abs((beta*distance_traveled) + const)
+    #batteryChange = abs((beta*durationMinutes) + const)
     batteryChange = abs((Distancebeta*distance_traveled)+(timeBeta*durationMinutes)+const)
     return(batteryChange)
     
@@ -204,7 +204,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
             trips_complete += 1
             
     
-    '''
+    
     # plot charging profiles x trip 
     plt.scatter(range(trips_complete), charging_profile)
     plt.plot(range(trips_complete), charging_profile)
@@ -212,7 +212,6 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     plt.xlabel('Number of Completed Trips')
     plt.ylabel('Charging %')
     plt.xticks(range(15))
-    '''
     
     
 def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold, 
@@ -220,10 +219,10 @@ def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold,
     bus = Bus()
     bus.current_charge_pct = start_charge_pct
     bus.block_id = blockID
-    charge_locations = []
+    
     # get trip list based on block_id
     trips = df[df.block_id == blockID].trip_id.tolist()
-    ChargePoints = ''
+    
         
     # initialize dict which will contain time possible to charge during layover
     charge_options = {}
@@ -248,18 +247,16 @@ def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold,
             #check to see if trip is at charge location
             try:
                 charge_time = start_time - last_end_time - 2*time_to_charge['time'].loc[int(trip.trip_id)]
+                print('checkpoint' + str(t))
+                print('charge time', charge_time)
             except:
                 #needed because currently don't have comprehensive list of all trips associated with layovers
                 charge_time = start_time - last_end_time
-            if(charge_time > min_charge_time):
+            if(charge_time > 0):
                 #seeing what would happen if it were allowed to charge in layover
                 #set charge to false for normal failures
                 added_charge = bus.chargeBus(charge_time, start_charge_pct, charge=False)
-                if(time_to_charge['location'].loc[trip.trip_id] in charge_options):
-                    charge_options[time_to_charge['location'].loc[trip.trip_id]] += added_charge
-                else:
-                    charge_options.update({time_to_charge['location'].loc[trip.trip_id]: added_charge})
-                ChargePoints = ChargePoints + ',' + str(t)
+                charge_options.update({trip.trip_id: added_charge})
             
         #find new end time current trip
         (h,m,s) = trip.end_time.split(':')
@@ -272,7 +269,7 @@ def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold,
         bus.current_charge_pct = bus.current_charge_pct - trip.charge_required 
         
     chargeNeeded = min_charge_threshold - bus.current_charge_pct
-    return [chargeNeeded, charge_options, ChargePoints]
+    return [chargeNeeded, charge_options]
 
 ### Run program
 
@@ -285,12 +282,39 @@ if __name__ == '__main__':
     time_of_year = 'Winter' # seasonality var
     eval_type = 'reg' # whether to eval charging profile by regression or worst case scenario
     datafilepath = ''
-    df = pd.read_csv(datafilepath+'trips_flattened_allRoutes.csv')
+    df = pd.read_csv(datafilepath+'trips_flattened_eastLibRoutes_miles.csv')
 
     allBlocks = np.unique(df.block_id)
     tripFails = []
+    
+    #example set of trips where charging is required
+    tripLocations = [[1, [11806070, 9999070, 1775070, 11532070, 9943070]],
+                      [2, [11297070, 4420070, 12721010, 6313010, 1376010, 11660010]],
+                      [3, [10584010, 8609010]], [4, [5375080, 10799080, 6766080, 12005080, 9474080, 10788080]],
+                      [5, [9832020, 5766020, 1385020, 4293020, 11142020, 7087020, 10114020]],
+                      [6, [4787020, 9255020, 4367020, 7779020, 6236020, 5849020, 9728020]]]
+    #whether charging location has charger or not, 1 for charger, 0 no charger
+    charge_locations = [1, 0 , 0, 1, 0, 1]
+    #how long does it take to get from layover needing charge to potential charger location
+    travel_time_matrix = pd.read_csv('TraveltoChargerMatrix.csv', dtype=int)
+    #convert the above three data structures to list of route number and time it takes to get to active charger
     time_to_charge = []
- 
+    for item in tripLocations:
+        for i in range(len(item[1])):
+            if(charge_locations[item[0]-1] == 1):
+                time_to_charge.append([item[1][i],item[0], 0])
+            else:
+                best_time = 60
+                best_location = 0
+                for j in range(len(travel_time_matrix[str(item[0])])):
+                    if(charge_locations[j] == 1):
+                        if(travel_time_matrix[str(item[0])].iloc[j] < best_time):
+                            best_time = travel_time_matrix[str(item[0])].iloc[j]
+                            best_location = j
+                time_to_charge.append([item[1][i], best_location, best_time])
+    time_to_charge = pd.DataFrame(time_to_charge, columns=['trip','location', 'time'])
+    time_to_charge.set_index('trip', inplace=True)
+    
     blockID_needing_charge = []
     block_charge_options = []
     for block in allBlocks:
@@ -310,77 +334,20 @@ if __name__ == '__main__':
     
     df[df.block_id.apply(lambda x: x in blockID_needing_charge)].to_csv('blocks_needing_charge.csv')
     
-    
-    #example set of trips where charging is required
-    tripLocations = pd.DataFrame({'stop_id': [4405, 8308,16063,22873,16111,8812,19687,15276,22326,3302,21624,1407], 
-                                  'trips': [[12934070, 11671070, 2147070, 4280070, 9717070, 5465070, 7108070, 12062070, 613070, 6971070, 10596070, 5929070, 8986070, 2315070, 7272070, 10979070, 1160070, 5044070, 9669010, 2904010, 3606010, 13009010, 6219010, 3896010, 9345010, 3267010, 4519010, 3837010, 5055010, 5281010, 9702080, 696080, 13087080, 10660080, 13170080, 7350080, 4792080, 11216080, 9806080, 3399080, 7514080, 7202080, 11340020, 871020, 9247020, 2803020, 2982020, 4265020, 7578020, 2079020, 7619020, 5045020, 3671020, 2114020],
-                                  [7906070, 11698070, 8893070, 7707070, 5179070, 4015070, 7834070, 6738070, 5626070, 10092010, 1615010, 10173010, 6134010, 13733010, 13702010, 2470080, 8600080, 6516080, 7512080, 4309080, 6973080, 12541020, 12926020, 5583020, 7079020, 6151020, 4424020],
- [7800070, 5975070, 5213070, 1966070, 4054070, 11729070, 7521070, 4206070, 4665070, 12976070, 12821070, 8618070, 7686070, 6793070, 1324070, 1725070, 5299070, 2156070, 4872070, 10113070, 1377070, 7563070, 3264070, 13502070, 12806070, 12786070, 5220070, 8728070, 6359070, 2313070, 13411070, 6279070, 7339070, 1368070, 2553070, 379070, 4242070, 1745070, 5909070, 5241070, 12419070, 7544070, 12178070, 6967070, 7231070, 5616070, 3948070, 3825070, 3890070, 13370070, 11829070, 2393070, 1355070, 969070, 4634010, 10145010, 13864010, 1183010, 5163010, 3579010, 6154010, 13185010, 10460010, 455010, 2924010, 14005010, 5982010, 8625010, 2201010, 1271010, 13731010, 4283010, 11479010, 7809010, 14057010, 9069010, 2213010, 9083010, 11612010, 7682010, 2395010, 8373010, 3428010, 8807010, 7182010, 8817010, 771010, 7102010, 13675010, 7408010, 11460010, 5662010, 1848010, 7704010, 12743010, 4059010, 3941080, 5285080, 6084080, 14031080, 6338080, 13116080, 1293080, 12851080, 2858080, 2901080, 2064080, 7712080, 506080, 13140080, 12080, 11526080, 1239080, 13269080, 12033080, 11421080, 3908080, 4722080, 131080, 3001080, 10659080, 12667080, 9529080, 11779080, 3004080, 3299080, 2146080, 4040080, 7789080, 8495080, 4050080, 4633080, 11769080, 3790080, 6422080, 35080, 9135080, 8249080, 5959020, 13221020, 3443020, 10454020, 9746020, 12028020, 1828020, 4322020, 3065020, 5762020, 4787020, 1557020, 12576020, 6982020, 598020, 452020, 7392020, 8717020, 3020, 12456020, 9255020, 2655020, 2085020, 1996020, 12388020, 12828020, 68020, 5438020, 2369020, 4367020, 12859020, 9676020, 9464020, 11908020, 10025020, 13887020, 908020, 4187020, 1568020, 1906020, 7849020, 8276020, 7779020, 5492020, 11930020, 5597020, 1275020, 12219020, 5072020, 7545020, 5879020, 4205020, 5126020, 10684020, 11914020, 1802020, 11232020, 6236020, 2140020, 11423020, 5093020, 8993020, 638020, 7889020, 5385020, 5849020, 7074020],
- [1493070, 12009070, 5030070, 8687070, 1914070, 8210070, 1118070, 2077070, 8682070, 8791070, 9571070, 7376070, 5846070, 2992070, 4387010, 3627010, 397010, 758010, 2015010, 3324010, 5638010, 4260010, 12244010, 7250010, 578010, 4375010, 2883010, 1850010, 1586080, 8710080, 4395080, 4303080, 6899080, 2183080, 10419080, 1401080, 4365080, 2529080, 4074080, 2909080, 1628080, 353080, 4123020, 1385020, 5426020, 5877020, 4293020, 9414020, 13962020, 11343020, 3727020, 2051020, 7333020, 10248020, 1128020, 10114020, 1590020, 1009020, 6675020],
- [9383070],
- [600070],
- [14019070, 8227070, 10664070],
- [10669070, 216070, 1335070, 9111070, 7763070, 7677070, 8344070, 8723070, 3078070, 1235070, 12416070, 6833070, 14058070, 9643070, 9628070, 8060070],
- [11662020, 2591020, 3856020, 7650020, 5766020, 5404020, 5865020, 4087020],
- [9832020, 4960020],
- [7219020, 11618020],
- [1489020, 5076020]]})
-    tripLocations = tripLocations.set_index('stop_id')
-    #whether charging location has charger or not, 1 for charger, 0 no charger
-    charge_locations = [1, 1 , 1, 1, 1, 1,1,1,1,1,1,1]
-    #how long does it take to get from layover needing charge to potential charger location
-    travel_time_matrix = pd.read_csv('TraveltoChargerMatrix.csv', dtype=int)
-    #convert the above three data structures to list of route number and time it takes to get to active charger
-    time_to_charge = []
-    print('range ', len(tripLocations))
-    for k in range(len(tripLocations)):
-        item = tripLocations['trips'].iloc[k]
-        stop = tripLocations.index.values[k]
-        print('itemlen ', len(tripLocations['trips'].iloc[k]))
-        print('list ' , tripLocations['trips'].iloc[k])
-        print('index: ', tripLocations.index.values[k])
-        for i in item:
-            if(charge_locations[k] == 1):
-                time_to_charge.append([i, stop, 0])
-            else:
-                best_time = 60
-                best_location = 0
-                for j in range(len(travel_time_matrix)):
-                    if(charge_locations[j] == 1):
-                        if((travel_time_matrix[str(stop)].iloc[j]) < best_time):
-                            best_time = travel_time_matrix[str(stop)].iloc[j]
-                            best_location = stop
-                time_to_charge.append([i, best_location, best_time])
-    time_to_charge = pd.DataFrame(time_to_charge, columns=['trip','location', 'time'])
-    time_to_charge.set_index('trip', inplace=True)
-    
+   
     
     #Finds how much charge the failed blocks need to be sucessful, need to set charge in bus charging to False to work properly
     charge_needed_list = []
-    ChargePoints = ''
     for block in blockID_needing_charge:
         FailedBlockCheck = get_charge_needed(df, block, start_charge_pct,
                                                min_charge_threshold, time_of_year, eval_type,
                                                time_to_charge)
         charge_needed_list.append([block, FailedBlockCheck[0]])
         block_charge_options.append([block, FailedBlockCheck[1]])
-        ChargePoints = ChargePoints + ',' + FailedBlockCheck[2]
-    
-    
-    df = df.set_index('trip_id')
-    ChargePoints = ChargePoints.split(',')
-    tripLocations = pd.Series()
-    for i in ChargePoints:
-        if i != '':
-            i = int(i)
-            stop = df['start_stop_id'].loc[i]
-            if stop in tripLocations:
-                tripLocations.loc[stop].append(i)
-            else:
-                tripLocations.loc[stop] = [i]
-    
-    tripLocations.to_csv('LayoverLocNeedCharge.csv')
         
+   
+
+    
 
     
     
