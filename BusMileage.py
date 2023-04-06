@@ -181,7 +181,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
                 charge_time = start_time - last_end_time - 2*time_to_charge['time'].loc[trip.trip_id]
             except:
                 charge_time = start_time - last_end_time
-            if(charge_time > 0):
+            if(charge_time > min_charge_time):
                 #seeing what would happen if it were allowed to charge in layover
                 #set charge to false for normal failures
                 added_charge = bus.chargeBus(charge_time, start_charge_pct, charge=False)
@@ -254,7 +254,7 @@ def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold,
             if(charge_time > min_charge_time):
                 #seeing what would happen if it were allowed to charge in layover
                 #set charge to false for normal failures
-                added_charge = bus.chargeBus(charge_time, start_charge_pct, charge=False)
+                added_charge = bus.chargeBus(charge_time, start_charge_pct, charge=True)
                 if(time_to_charge['location'].loc[trip.trip_id] in charge_options):
                     charge_options[time_to_charge['location'].loc[trip.trip_id]] += added_charge
                 else:
@@ -272,6 +272,8 @@ def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold,
         bus.current_charge_pct = bus.current_charge_pct - trip.charge_required 
         
     chargeNeeded = min_charge_threshold - bus.current_charge_pct
+    if(chargeNeeded < 0):
+        chargeNeeded = 0
     return [chargeNeeded, charge_options, ChargePoints]
 
 ### Run program
@@ -289,8 +291,9 @@ if __name__ == '__main__':
 
     allBlocks = np.unique(df.block_id)
     tripFails = []
-    time_to_charge = []
- 
+    time_to_charge = pd.read_csv('time_to_charge.csv')
+    time_to_charge = time_to_charge.set_index('trip')
+    
     blockID_needing_charge = []
     block_charge_options = []
     for block in allBlocks:
@@ -304,9 +307,6 @@ if __name__ == '__main__':
             
     tripFails = [i for i in tripFails if i != None]
     blockID_needing_charge = [i for i in blockID_needing_charge if i != None]
-    print(tripFails)
-    print()
-    print('Failed in '+ str(len(tripFails)) + ' blocks in ' + time_of_year)
     
     df[df.block_id.apply(lambda x: x in blockID_needing_charge)].to_csv('blocks_needing_charge.csv')
     
@@ -327,29 +327,26 @@ if __name__ == '__main__':
  [1489020, 5076020]]})
     tripLocations = tripLocations.set_index('stop_id')
     #whether charging location has charger or not, 1 for charger, 0 no charger
-    charge_locations = [1, 1 , 1, 1, 1, 1,1,1,1,1,1,1]
+    charge_locations = [1, 0 , 1, 1, 0, 0,1,1,1,0,1,1]
     #how long does it take to get from layover needing charge to potential charger location
     travel_time_matrix = pd.read_csv('TraveltoChargerMatrix.csv', dtype=int)
+    travel_time_matrix = travel_time_matrix.set_index('index')
     #convert the above three data structures to list of route number and time it takes to get to active charger
     time_to_charge = []
-    print('range ', len(tripLocations))
     for k in range(len(tripLocations)):
         item = tripLocations['trips'].iloc[k]
         stop = tripLocations.index.values[k]
-        print('itemlen ', len(tripLocations['trips'].iloc[k]))
-        print('list ' , tripLocations['trips'].iloc[k])
-        print('index: ', tripLocations.index.values[k])
         for i in item:
             if(charge_locations[k] == 1):
                 time_to_charge.append([i, stop, 0])
             else:
                 best_time = 60
-                best_location = 0
+                best_location = stop
                 for j in range(len(travel_time_matrix)):
                     if(charge_locations[j] == 1):
                         if((travel_time_matrix[str(stop)].iloc[j]) < best_time):
                             best_time = travel_time_matrix[str(stop)].iloc[j]
-                            best_location = stop
+                            best_location = travel_time_matrix.index.values[j]
                 time_to_charge.append([i, best_location, best_time])
     time_to_charge = pd.DataFrame(time_to_charge, columns=['trip','location', 'time'])
     time_to_charge.set_index('trip', inplace=True)
@@ -380,7 +377,7 @@ if __name__ == '__main__':
                 tripLocations.loc[stop] = [i]
     
     tripLocations.to_csv('LayoverLocNeedCharge.csv')
-        
+    time_to_charge.to_csv('time_to_charge.csv')
 
     
     
