@@ -88,9 +88,9 @@ def get_charge_required(distance_traveled, durationMinutes, time_of_year, eval_t
         
     else:
         if eval_type == 'reg':
-            Distancebeta = -0.5902 
+            Distancebeta = -0.5902
             timeBeta = 0
-            const = -1.7664  
+            const = -1.7664
         else: 
             beta = .92
             const = 0
@@ -216,7 +216,7 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
     
     
 def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold, 
-                      time_of_year, eval_type,time_to_charge):
+                      time_of_year, eval_type,time_to_charge, min_charge_time, numberOchargers):
     bus = Bus()
     bus.current_charge_pct = start_charge_pct
     bus.block_id = blockID
@@ -250,11 +250,13 @@ def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold,
                 charge_time = start_time - last_end_time - 2*time_to_charge['time'].loc[int(trip.trip_id)]
             except:
                 #needed because currently don't have comprehensive list of all trips associated with layovers
-                charge_time = start_time - last_end_time
+                charge_time = 0
             if(charge_time > min_charge_time):
                 #seeing what would happen if it were allowed to charge in layover
                 #set charge to false for normal failures
                 added_charge = bus.chargeBus(charge_time, start_charge_pct, charge=True)
+                numberOchargers.loc[time_to_charge['location'].loc[t]] 
+                
                 if(time_to_charge['location'].loc[trip.trip_id] in charge_options):
                     charge_options[time_to_charge['location'].loc[trip.trip_id]] += added_charge
                 else:
@@ -309,7 +311,23 @@ if __name__ == '__main__':
     blockID_needing_charge = [i for i in blockID_needing_charge if i != None]
     
     df[df.block_id.apply(lambda x: x in blockID_needing_charge)].to_csv('blocks_needing_charge.csv')
+    print('\nNumber of failed blocks: ', len(blockID_needing_charge))
     
+    
+    numberOchargers = pd.DataFrame({'stop_id': [4405, 8308,16063,22873,16111,8812,19687,15276,22326,3302,21624,1407],
+                                    'charger': [np.zeros(3600*24),
+                                                np.zeros(3600*24),
+                                                np.zeros(3600*24),
+                                                np.zeros(3600*24),
+                                                np.zeros(3600*24),
+                                                np.zeros(3600*24),
+                                                np.zeros(3600*24),
+                                                np.zeros(3600*24),
+                                                np.zeros(3600*24),
+                                                np.zeros(3600*24),
+                                                np.zeros(3600*24),
+                                                np.zeros(3600*24),]})
+    numberOchargers = numberOchargers.set_index('stop_id')
     
     #example set of trips where charging is required
     tripLocations = pd.DataFrame({'stop_id': [4405, 8308,16063,22873,16111,8812,19687,15276,22326,3302,21624,1407], 
@@ -327,7 +345,7 @@ if __name__ == '__main__':
  [1489020, 5076020]]})
     tripLocations = tripLocations.set_index('stop_id')
     #whether charging location has charger or not, 1 for charger, 0 no charger
-    charge_locations = [1, 0 , 1, 1, 0, 0,1,1,1,0,1,1]
+    charge_locations = [1, 0 , 1, 1, 0, 0,1,1,1,0,0,0]
     #how long does it take to get from layover needing charge to potential charger location
     travel_time_matrix = pd.read_csv('TraveltoChargerMatrix.csv', dtype=int)
     travel_time_matrix = travel_time_matrix.set_index('index')
@@ -358,7 +376,7 @@ if __name__ == '__main__':
     for block in blockID_needing_charge:
         FailedBlockCheck = get_charge_needed(df, block, start_charge_pct,
                                                min_charge_threshold, time_of_year, eval_type,
-                                               time_to_charge)
+                                               time_to_charge, min_charge_time, numberOchargers)
         charge_needed_list.append([block, FailedBlockCheck[0]])
         block_charge_options.append([block, FailedBlockCheck[1]])
         ChargePoints = ChargePoints + ',' + FailedBlockCheck[2]
@@ -366,7 +384,7 @@ if __name__ == '__main__':
     
     df = df.set_index('trip_id')
     ChargePoints = ChargePoints.split(',')
-    tripLocations = pd.Series()
+    tripLocations = pd.Series(dtype=float)
     for i in ChargePoints:
         if i != '':
             i = int(i)
