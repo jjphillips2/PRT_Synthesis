@@ -180,11 +180,11 @@ def charge_status_via_trip_completion(trips_flattened_df, blockID, start_charge_
             try:
                 charge_time = start_time - last_end_time - 2*time_to_charge['time'].loc[trip.trip_id]
             except:
-                charge_time = start_time - last_end_time
+                charge_time = 0
             if(charge_time > min_charge_time):
                 #seeing what would happen if it were allowed to charge in layover
                 #set charge to false for normal failures
-                added_charge = bus.chargeBus(charge_time, start_charge_pct, charge=False)
+                added_charge = bus.chargeBus(charge_time, start_charge_pct, charge=True)
             
         #find new end time current trip
         (h,m,s) = trip.end_time.split(':')
@@ -256,9 +256,8 @@ def get_charge_needed(df, blockID, start_charge_pct, min_charge_threshold,
                 #seeing what would happen if it were allowed to charge in layover
                 #set charge to false for normal failures
                 added_charge = bus.chargeBus(charge_time, start_charge_pct, charge=True)
-                print(charge_time)
                 for j in range(int(charge_time)):
-                    s = time_to_charge['location'].loc[t]
+                    s = time_to_charge['stop'].loc[t]
                     l = int(last_end_time+commute+j)
                     numberOchargers.loc[s][0][l] += 1
                 
@@ -327,7 +326,7 @@ if __name__ == '__main__':
     numberOchargers = numberOchargers.set_index('stop_id')
     
     #example set of trips where charging is required
-    tripLocations = pd.DataFrame({'stop_id': stops, 
+    tripLocations = pd.DataFrame({'stop': stops, 
                                   'trips': [[12934070, 11671070, 2147070, 4280070, 9717070, 5465070, 7108070, 12062070, 613070, 6971070, 10596070, 5929070, 8986070, 2315070, 7272070, 10979070, 1160070, 5044070, 9669010, 2904010, 3606010, 13009010, 6219010, 3896010, 9345010, 3267010, 4519010, 3837010, 5055010, 5281010, 9702080, 696080, 13087080, 10660080, 13170080, 7350080, 4792080, 11216080, 9806080, 3399080, 7514080, 7202080, 11340020, 871020, 9247020, 2803020, 2982020, 4265020, 7578020, 2079020, 7619020, 5045020, 3671020, 2114020],
                                   [7906070, 11698070, 8893070, 7707070, 5179070, 4015070, 7834070, 6738070, 5626070, 10092010, 1615010, 10173010, 6134010, 13733010, 13702010, 2470080, 8600080, 6516080, 7512080, 4309080, 6973080, 12541020, 12926020, 5583020, 7079020, 6151020, 4424020],
  [7800070, 5975070, 5213070, 1966070, 4054070, 11729070, 7521070, 4206070, 4665070, 12976070, 12821070, 8618070, 7686070, 6793070, 1324070, 1725070, 5299070, 2156070, 4872070, 10113070, 1377070, 7563070, 3264070, 13502070, 12806070, 12786070, 5220070, 8728070, 6359070, 2313070, 13411070, 6279070, 7339070, 1368070, 2553070, 379070, 4242070, 1745070, 5909070, 5241070, 12419070, 7544070, 12178070, 6967070, 7231070, 5616070, 3948070, 3825070, 3890070, 13370070, 11829070, 2393070, 1355070, 969070, 4634010, 10145010, 13864010, 1183010, 5163010, 3579010, 6154010, 13185010, 10460010, 455010, 2924010, 14005010, 5982010, 8625010, 2201010, 1271010, 13731010, 4283010, 11479010, 7809010, 14057010, 9069010, 2213010, 9083010, 11612010, 7682010, 2395010, 8373010, 3428010, 8807010, 7182010, 8817010, 771010, 7102010, 13675010, 7408010, 11460010, 5662010, 1848010, 7704010, 12743010, 4059010, 3941080, 5285080, 6084080, 14031080, 6338080, 13116080, 1293080, 12851080, 2858080, 2901080, 2064080, 7712080, 506080, 13140080, 12080, 11526080, 1239080, 13269080, 12033080, 11421080, 3908080, 4722080, 131080, 3001080, 10659080, 12667080, 9529080, 11779080, 3004080, 3299080, 2146080, 4040080, 7789080, 8495080, 4050080, 4633080, 11769080, 3790080, 6422080, 35080, 9135080, 8249080, 5959020, 13221020, 3443020, 10454020, 9746020, 12028020, 1828020, 4322020, 3065020, 5762020, 4787020, 1557020, 12576020, 6982020, 598020, 452020, 7392020, 8717020, 3020, 12456020, 9255020, 2655020, 2085020, 1996020, 12388020, 12828020, 68020, 5438020, 2369020, 4367020, 12859020, 9676020, 9464020, 11908020, 10025020, 13887020, 908020, 4187020, 1568020, 1906020, 7849020, 8276020, 7779020, 5492020, 11930020, 5597020, 1275020, 12219020, 5072020, 7545020, 5879020, 4205020, 5126020, 10684020, 11914020, 1802020, 11232020, 6236020, 2140020, 11423020, 5093020, 8993020, 638020, 7889020, 5385020, 5849020, 7074020],
@@ -340,30 +339,26 @@ if __name__ == '__main__':
  [9832020, 4960020],
  [7219020, 11618020],
  [1489020, 5076020]]})
-    tripLocations = tripLocations.set_index('stop_id')
-    #whether charging location has charger or not, 1 for charger, 0 no charger
-    charge_locations = [1, 0 , 1, 1, 0, 0,1,1,1,0,0,0]
+    tripLocations = tripLocations.set_index('stop')
     #how long does it take to get from layover needing charge to potential charger location
-    travel_time_matrix = pd.read_csv('TraveltoChargerMatrix.csv', dtype=int)
+    travel_time_matrix = pd.read_csv('stop_to_layover_travelTime.csv')
     travel_time_matrix = travel_time_matrix.set_index('index')
+    travel_time_matrix = travel_time_matrix.transpose()
     #convert the above three data structures to list of route number and time it takes to get to active charger
     time_to_charge = []
     for k in range(len(tripLocations)):
         item = tripLocations['trips'].iloc[k]
         stop = tripLocations.index.values[k]
         for i in item:
-            if(charge_locations[k] == 1):
-                time_to_charge.append([i, stop, 0])
-            else:
-                best_time = 60
-                best_location = stop
-                for j in range(len(travel_time_matrix)):
-                    if(charge_locations[j] == 1):
-                        if((travel_time_matrix[str(stop)].iloc[j]) < best_time):
-                            best_time = travel_time_matrix[str(stop)].iloc[j]
-                            best_location = travel_time_matrix.index.values[j]
-                time_to_charge.append([i, best_location, best_time])
-    time_to_charge = pd.DataFrame(time_to_charge, columns=['trip','location', 'time'])
+            best_time = 60
+            best_location = stop
+            for j in range(len(travel_time_matrix)):
+                if(travel_time_matrix[0].iloc[j] == 1):
+                    if((travel_time_matrix[stop].iloc[j]) < best_time):
+                        best_time = travel_time_matrix[stop].iloc[j]
+                        best_location = travel_time_matrix.index.values[j]
+            time_to_charge.append([i, stop, best_location, best_time])
+    time_to_charge = pd.DataFrame(time_to_charge, columns=['trip','stop', 'location', 'time'])
     time_to_charge.set_index('trip', inplace=True)
     
     
