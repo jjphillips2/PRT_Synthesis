@@ -264,11 +264,12 @@ def failed_block_loop(df, blockID, start_charge_pct, min_charge_threshold,
                 added_charge = bus.chargeBus(charge_time, start_charge_pct, charge=True)
                  #will fail if running on new dataset where triplocations and numberOchargers hasn't been setup yet
                 if numberOchargers is not None:
+                    s = time_to_charge['stop'].loc[t]
                     for j in range(int(charge_time)):
-                        s = time_to_charge['stop'].loc[t]
                         l = int(last_end_time+commute+j)
                         numberOchargers.loc[s][1][l] += 1
-                    
+                    if charge_options == {}:
+                        numberOchargers['num_blocks'].loc[s] += 1
                     if(time_to_charge['location'].loc[trip.trip_id] in charge_options):
                         charge_options[time_to_charge['location'].loc[trip.trip_id]] += added_charge
                     else:
@@ -368,12 +369,16 @@ if __name__ == '__main__':
     tripLocations.index.name = 'stop'
     tripLocations.to_csv(datafilepath+'StopLocNeedCharge.csv')
     
+    num_blocks = []
     zeros = []
     for i in range(len(tripLocations)):
+        num_blocks.append(0)
         zeros.append(np.zeros(3600*24))
     numberOchargers = pd.DataFrame({'stop_id': tripLocations.index.values,
                                     'last_end_id': end_tripLocations,
-                                    'charger': zeros})
+                                    'charger': zeros,
+                                    'num_blocks': num_blocks
+                                    })
     numberOchargers = numberOchargers.set_index('stop_id')
                       
     
@@ -386,7 +391,7 @@ if __name__ == '__main__':
         item = tripLocations.iloc[k]
         stop = tripLocations.index.values[k]
         for i in item:
-            best_time = 3
+            best_time = 60
             best_location = stop
             for j in range(len(travel_time_matrix)):
                 if(travel_time_matrix[0].iloc[j] == 1):
