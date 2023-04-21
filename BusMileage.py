@@ -235,6 +235,7 @@ def failed_block_loop(df, blockID, start_charge_pct, min_charge_threshold,
     # initialize dict which will contain time possible to charge during layover
     charge_options = {}
     last_end_time = 60*24
+    last_route = ''
     # initialize array to keep track of charge for plotting charge depletion x trip 
     charge = start_charge_pct
     trips_complete = 1
@@ -250,6 +251,7 @@ def failed_block_loop(df, blockID, start_charge_pct, min_charge_threshold,
         #get time in minutes when the trip starts
         (h, m, s) = trip.start_time.split(':')
         start_time = int(h) * 60 + int(m) + int(s)/60
+        
         #Find if there is enough time to charge bus
         if(start_time - last_end_time > min_charge_time):
             #check to see if trip is at charge location
@@ -274,14 +276,14 @@ def failed_block_loop(df, blockID, start_charge_pct, min_charge_threshold,
                         charge_options[time_to_charge['location'].loc[trip.trip_id]] += added_charge
                     else:
                         charge_options.update({time_to_charge['location'].loc[trip.trip_id]: added_charge})
-                    numberOchargers['routes'].loc[s].append(trip.route_id)
+                    numberOchargers['routes'].loc[s].append(last_route)
                 ChargePoints = ChargePoints + ',' + str(t)
                 
             
         #find new end time current trip
         (h,m,s) = trip.end_time.split(':')
         last_end_time = int(h)*60 + int(m) + int(s)/60
-        
+        last_route = trip.route_id
         trip.total_trip_distance = trip_df.total_distance_traveled.iloc[0]
         trip.charge_required = get_charge_required(trip.total_trip_distance, trip.trip_duration,
                                                    time_of_year, bus_type, eval_type)           
@@ -305,10 +307,10 @@ if __name__ == '__main__':
     time_of_year = 'Winter' # seasonality var
     eval_type = 'reg' # whether to eval charging profile by regression or worst case scenario
     #set bus type to 'jumbo' for 60ft, anything else means 40'
-    bus_type = 'jumbo'
+    bus_type = ''
     datafilepath = r'C:\cmu\Spring2023\System Synthesis\Github\PRT_Synthesis'
     #choose 'eastLib' or 'brt' or 'allRoutes'
-    data = 'brt'
+    data = 'allRoutes'
     datafilepath = os.path.join(datafilepath, data) + '\\'
     df = pd.read_csv(datafilepath+'trips_flattened_'+data+'.csv')
 
@@ -394,7 +396,7 @@ if __name__ == '__main__':
         item = tripLocations.iloc[k]
         stop = tripLocations.index.values[k]
         for i in item:
-            best_time = 60
+            best_time = 0
             best_location = stop
             for j in range(len(travel_time_matrix)):
                 if(travel_time_matrix[0].iloc[j] == 1):
