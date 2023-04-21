@@ -274,7 +274,7 @@ def failed_block_loop(df, blockID, start_charge_pct, min_charge_threshold,
                         charge_options[time_to_charge['location'].loc[trip.trip_id]] += added_charge
                     else:
                         charge_options.update({time_to_charge['location'].loc[trip.trip_id]: added_charge})
-                
+                    numberOchargers['routes'].loc[s].append(trip.route_id)
                 ChargePoints = ChargePoints + ',' + str(t)
                 
             
@@ -305,10 +305,10 @@ if __name__ == '__main__':
     time_of_year = 'Winter' # seasonality var
     eval_type = 'reg' # whether to eval charging profile by regression or worst case scenario
     #set bus type to 'jumbo' for 60ft, anything else means 40'
-    bus_type = ''
+    bus_type = 'jumbo'
     datafilepath = r'C:\cmu\Spring2023\System Synthesis\Github\PRT_Synthesis'
     #choose 'eastLib' or 'brt' or 'allRoutes'
-    data = 'allRoutes'
+    data = 'brt'
     datafilepath = os.path.join(datafilepath, data) + '\\'
     df = pd.read_csv(datafilepath+'trips_flattened_'+data+'.csv')
 
@@ -371,13 +371,16 @@ if __name__ == '__main__':
     
     num_blocks = []
     zeros = []
+    routes = []
     for i in range(len(tripLocations)):
+        routes.append([])
         num_blocks.append(0)
         zeros.append(np.zeros(3600*24))
     numberOchargers = pd.DataFrame({'stop_id': tripLocations.index.values,
                                     'last_end_id': end_tripLocations,
                                     'charger': zeros,
-                                    'num_blocks': num_blocks
+                                    'num_blocks': num_blocks,
+                                    'routes': routes
                                     })
     numberOchargers = numberOchargers.set_index('stop_id')
                       
