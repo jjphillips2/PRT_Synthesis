@@ -396,7 +396,7 @@ if __name__ == '__main__':
         item = tripLocations.iloc[k]
         stop = tripLocations.index.values[k]
         for i in item:
-            best_time = 0
+            best_time = 60
             best_location = stop
             for j in range(len(travel_time_matrix)):
                 if(travel_time_matrix[0].iloc[j] == 1):
