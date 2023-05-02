@@ -99,7 +99,7 @@ def get_charge_required(distance_traveled, durationMinutes, time_of_year, bus_ty
             
     #batteryChange = abs((beta*distance_traveled) + const)
     batteryChange = abs((Distancebeta*distance_traveled)+(timeBeta*durationMinutes)+const)
-    if bus_type == 'jumbo':
+    if bus_type[0:5] == 'jumbo':
         batteryChange = batteryChange*1.58
     return(batteryChange)
     
@@ -296,6 +296,12 @@ def failed_block_loop(df, blockID, start_charge_pct, min_charge_threshold,
     return [chargeNeeded, charge_options, ChargePoints, numberOchargers]
 
 
+
+
+
+
+
+
 ### Run program
 
 if __name__ == '__main__':
@@ -307,10 +313,10 @@ if __name__ == '__main__':
     time_of_year = 'Winter' # seasonality var
     eval_type = 'reg' # whether to eval charging profile by regression or worst case scenario
     #set bus type to 'jumbo' for 60ft, anything else means 40'
-    bus_type = ''
+    bus_type = 'jumbo nuetron'
     datafilepath = r'C:\cmu\Spring2023\System Synthesis\Github\PRT_Synthesis'
     #choose 'eastLib' or 'brt' or 'allRoutes'
-    data = 'allRoutes'
+    data = 'brt'
     datafilepath = os.path.join(datafilepath, data) + '\\'
     df = pd.read_csv(datafilepath+'trips_flattened_'+data+'.csv')
 
