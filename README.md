@@ -13,4 +13,4 @@ This repository houses code files and data generated during our analyses that in
 * dataGenerated: contains files that are either outputs of the programs, or processed versions of files provided by PRT 
 * eastLib: folder with results of running the simulation on routes from the East Liberty garage (assuming 40-ft buses)
 * Map Bibliography/Methodology: resources/documentation for the supporting ArcGIS/Esri products delivered
-* PRT_CMU_EBus.zip: data and ArcGIS files for supporting Esri products delivered
+* PRT_CMU_EBus.zip: An esri project file that contains PRT routes, stops, parcels and geoprocessing layers
