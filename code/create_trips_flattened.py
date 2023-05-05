@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Purpose: Create flattened trip dataset for east liberty garage routes only
+Purpose: Create flattened trip dataset. Resulting dataset is at trip_id level.
 """
 
 import pandas as pd

@@ -3,6 +3,8 @@
 """
 Bus Mileage Tracker
 
+Identifies failed stops and potential charging points
+
 """
 
 import pandas as pd

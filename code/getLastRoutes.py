@@ -4,10 +4,8 @@
 
 Converting output of BusMileage.py to GIS friendly output
 
-Using the output of BusMileage.py (blocks_needing_charge) to keep the routes before failure for each block.
-Thus, the dataset should be unique by block. 
-
-Note right now (pre-midterm) we are not considering the effects of charging. 
+Using the output of BusMileage.py (blocks_needing_charge) to analyze the 
+routes before failure for each block. Also focuses on the previous layover spot before failure
 
 # run after running BusMileage.py
 
