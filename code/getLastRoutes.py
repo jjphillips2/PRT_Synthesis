@@ -21,7 +21,7 @@ import datetime as datetime
 # read stops dataset
 
 # read in output from BusMileage.py
-blocks_to_charge = pd.read_csv('blocks_needing_charge.csv')
+blocks_to_charge = pd.read_csv('blocks_needing_charge.csv') # output from BusMileage.py
 blocks_to_charge.shape
 len(np.unique(blocks_to_charge.block_id))
 
@@ -45,7 +45,7 @@ for block in np.unique(blocks_to_charge.block_id):
 df_w_layover = df_w_layover.reset_index(drop = True)
 df_w_layover.shape
 
-failed_trips_id = tripFails
+failed_trips_id = tripFails # from BusMileage.py
 
 # for each trip, get the index where it failed, and return the previous trip
 # this represents the last completed trip before requiring charge (subtract 1 to get the previous stop if not a layover)
@@ -72,7 +72,7 @@ np.unique(last_route_per_block.end_stop_id)
 
 
 
-# for outputs
+# code for outputs
 keep_vars = ['block_id','trip_id','route_id','trip_start_time','trip_end_time',
              'total_distance_traveled','timeDelta_minutes','trip_headsign',
              'start_stop','start_stop_id','end_stop','end_stop_id']
@@ -152,8 +152,10 @@ for block in allBlocks:
     if block not in EL_blocks: 
         print(block)
         all_only.append(block)
-        
-tripWide[tripWide.block_id.apply(lambda x: x in all_only)].groupby('route_id')['block_id'].count().sort_values(ascending = False)
+
+# read in trips_flattened_allRoutes.csv
+trips = pd.read_csv('trips_flattened_allRoutes.csv')
+trips[trips.block_id.apply(lambda x: x in all_only)].groupby('route_id')['block_id'].count().sort_values(ascending = False)
         
 # failed blocks in east liberty list not in overall list
 for block in EL_blocks: 
@@ -166,41 +168,4 @@ for block in EL_blocks:
 
 
 
-
-
-# =============================================================================
-# 
-# # output
-# 
-# 
-# keep_vars = ['block_id','trip_id','route_id','trip_start_time','trip_end_time',
-#              'total_distance_traveled','timeDelta_minutes','trip_headsign',
-#              'start_stop','start_stop_id','end_stop','end_stop_id']
-# 
-# 
-# #save_file_path_name = 'last_routes_'+season+"_"+eval_type+'.csv'
-# save_file_path_name = 'last_layover_routes_'+season+"_"+eval_type+'.csv'
-# last_route_per_block[keep_vars].to_csv(save_file_path_name)
-# 
-# 
-# ## read in and analyze
-# winter_reg = pd.read_csv('last_layover_routes_Winter_reg.csv')
-# summer_reg = pd.read_csv('last_layover_routes_Summer_reg.csv')
-# winter_wc = pd.read_csv('last_layover_routes_Winter_wc.csv')
-# summer_wc = pd.read_csv('last_layover_routes_Summer_wc.csv')
-# 
-#     
-# lastLayoverRoutes = pd.concat([winter_reg, summer_reg, winter_wc, summer_wc])
-# 
-# np.unique(lastLayoverRoutes.trip_headsign)
-# np.unique(lastLayoverRoutes.route_id)
-# lastLayoverRoutes.groupby(['trip_headsign', 'route_id'])['block_id'].count().sort_values()   
-# 
-# 
-# timeLayoverRoutes = pd.concat([winter_time, summer_time])
-# timeLayoverRoutes.groupby(['trip_headsign', 'route_id'])['block_id'].count().sort_values()  
-# 
-# 
-# 
-# =============================================================================
 
