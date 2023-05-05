@@ -1,0 +1,35 @@
+Regression Parameter Settings
+
+DISTANCE MODELS 
+Summer		
+	DistanceBeta	﻿0.42933544
+	TimeBeta		0
+	Const	﻿	1.91616128
+		
+Winter		
+	DistanceBeta	﻿0.5902 
+	TimeBeta		0
+	Const	﻿	1.7664  
+
+
+
+TIME MODELS 
+Summer		
+	DistanceBeta	0
+	TimeBeta	﻿	0.0907
+	Const	﻿	1.7639
+Winter		
+	DistanceBeta	0
+	TimeBeta	﻿	0.1322  
+	Const	﻿	1.8642
+
+
+DISTANCE+TIME MODELS
+
+Summer	Distance Beta	﻿0.1799
+	Time Beta	﻿0.0565
+	Const	﻿1.2035
+
+Winter	Distance Beta	﻿0.3257
+	Time Beta	﻿0.0701
+	Const	﻿-0.0178 
